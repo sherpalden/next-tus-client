@@ -84,14 +84,27 @@ const Wrapper = styled.div`
   }
 `
 const Home: NextPage = () => {
+  //reference for file input element; required when file need to be cleared.
   const fileUploadRef = useRef<HTMLInputElement>(null)
+
+  //state to track the upload state like 'Uploading', 'Paused', 'Upload Successful'.
   const [uploadState, setUploadState] = useState("")
+
+  //state that represent current file that is being uploading.
   const [file, setFile] = useState<File | null>(null)
 
+  /*
+  state that keeps track of current http request that is uploading a file.
+  this is very important while pausing the upload in which case the request has to be aborted.
+  well, the library tus-js-client has the method to abort the upload but in my implementation it
+  does not seem to work. So, I created this state so that I can abort the upload request on my own.
+  */
   const [currUploadReq, setCurrUploadReq] = useState<tus.HttpRequest | null>(null)
 
+  //keeps track of progress of the current file that is uploading.
   const [progress, setProgress] = useState(0)
 
+  //initialize tus upload object.
   const upload = file && new tus.Upload(file, {
     endpoint: "http://localhost:8080/tus-files/",
     retryDelays: [0, 3000],
@@ -117,6 +130,7 @@ const Home: NextPage = () => {
     }
   })
 
+  //handler that runs when upload is cancelled.
   const uploadCancelHandler = () => {
     currUploadReq?.abort()
     setUploadState("")
@@ -125,6 +139,7 @@ const Home: NextPage = () => {
     if(fileUploadRef.current) fileUploadRef.current.value = ""
   }
 
+  //handler that runs when upload is paused.
   const uploadPauseHandler = () => {
     if(upload) {
       setUploadState("Paused")
@@ -132,6 +147,7 @@ const Home: NextPage = () => {
     }
   }
 
+  //handler that runs when upload is resumed.
   const uploadResumeHandler = () => {
     if(!upload) return
     upload.findPreviousUploads().then(function (previousUploads) {
@@ -143,6 +159,7 @@ const Home: NextPage = () => {
     })
   }
 
+  //initiation of file upload.
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if(e.target.files === null) return
     setUploadState("Uploading")
